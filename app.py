@@ -157,7 +157,9 @@ def extract_date_features(date_input):
 def create_input_dataframe(date_features, lag_1, lag_7, lag_14, lag_30,
                           rolling_mean_7, rolling_mean_14, rolling_std_7, trend):
     """
-    Create input DataFrame with proper types for model prediction.
+    Create input DataFrame with aggressive type conversion for model prediction.
+    
+    CRITICAL: Ensures NO object dtypes to prevent scipy.sparse errors.
     
     Parameters:
     -----------
@@ -175,13 +177,14 @@ def create_input_dataframe(date_features, lag_1, lag_7, lag_14, lag_30,
     Returns:
     --------
     pd.DataFrame or None
-        Input data with all features, properly typed as float64
+        Input data with ALL columns as float64 (no object dtype)
     """
     try:
         if date_features is None:
             return None
         
-        # Build input data with explicit float conversion
+        # STEP 1: Build initial dictionary with explicit Python float/int
+        # (NOT numpy types, NOT pandas types)
         input_dict = {
             "day": float(date_features["day"]),
             "month": float(date_features["month"]),
@@ -198,17 +201,45 @@ def create_input_dataframe(date_features, lag_1, lag_7, lag_14, lag_30,
             "trend": float(trend)
         }
         
-        # Create DataFrame
+        # STEP 2: Create DataFrame (will initially have float64 but we'll clean it)
         df = pd.DataFrame(input_dict, index=[0])
         
-        # Force all columns to float64 (CRITICAL for sklearn compatibility)
-        df = df.astype("float64")
+        # STEP 3: AGGRESSIVE TYPE CONVERSION - Convert ALL to numeric
+        # errors='coerce' converts any non-numeric to NaN
+        for col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors='coerce')
         
-        # Reorder to match expected column order from training
+        # STEP 4: Fill any NaN values with 0
+        df = df.fillna(0.0)
+        
+        # STEP 5: Replace infinities with 0
+        df = df.replace([np.inf, -np.inf], 0.0)
+        
+        # STEP 6: Force ALL columns to float64 (CRITICAL)
+        # This ensures NO object dtypes remain
+        df = df.astype(np.float64)
+        
+        # STEP 7: Verify no object dtypes
+        if (df.dtypes == 'object').any():
+            logger.warning("WARNING: Object dtype detected after conversion!")
+            for col in df.columns:
+                if df[col].dtype == 'object':
+                    logger.warning(f"  Column '{col}' has dtype: {df[col].dtype}")
+                    # Force convert any remaining object columns
+                    df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0.0).astype(np.float64)
+        
+        # STEP 8: Reorder to match expected column order from training
         df = df[expected_columns]
+        
+        # STEP 9: Final verification
+        assert not (df.dtypes == 'object').any(), "Object dtype found in final DataFrame!"
+        assert df.isnull().any().any() == False, "NaN values found in final DataFrame!"
         
         return df
     
+    except AssertionError as ae:
+        logger.error(f"Assertion failed: {str(ae)}")
+        return None
     except Exception as e:
         logger.error(f"DataFrame creation error: {str(e)}")
         return None
@@ -233,7 +264,7 @@ st.markdown("---")
 
 # Show input validation if data is ready
 if input_data is not None:
-    with st.expander("🔍 Input Data Validation", expanded=False):
+    with st.expander("🔍 Input Data Validation & Debug Info", expanded=False):
         col_val1, col_val2 = st.columns(2)
         
         with col_val1:
@@ -241,13 +272,21 @@ if input_data is not None:
             st.dataframe(input_data.T, use_container_width=True)
         
         with col_val2:
-            st.write("**Data Types:**")
+            st.write("**Data Types (CRITICAL CHECK):**")
             dtype_df = pd.DataFrame({
                 "Feature": input_data.columns,
                 "Type": input_data.dtypes.astype(str),
                 "Value": input_data.iloc[0].values
             })
             st.dataframe(dtype_df, use_container_width=True)
+            
+            # Highlight any object dtypes
+            object_cols = [col for col in input_data.columns if input_data[col].dtype == 'object']
+            if object_cols:
+                st.error(f"❌ CRITICAL: Object dtype found in: {object_cols}")
+            else:
+                st.success("✅ All columns are numeric (no object dtype)")
+
 
 # ============================================================================
 # PREDICTION BUTTON AND RESULTS
@@ -265,7 +304,24 @@ if predict_button:
     if input_data is None:
         st.error("❌ Error: Failed to prepare input data. Please check your inputs.")
     else:
+        # Pre-prediction validation
         try:
+            # Check for object dtypes (scipy.sparse issue)
+            object_cols = [col for col in input_data.columns if input_data[col].dtype == 'object']
+            if object_cols:
+                st.error(f"❌ **Type Error**: Columns with object dtype: {object_cols}")
+                st.stop()
+            
+            # Check for NaN values
+            if input_data.isnull().any().any():
+                st.error("❌ **Validation Error**: NaN values detected in input data")
+                st.stop()
+            
+            # Check for infinities
+            if np.isinf(input_data.values).any():
+                st.error("❌ **Validation Error**: Infinite values detected in input data")
+                st.stop()
+            
             # Make prediction
             prediction = model_pipeline.predict(input_data)
             predicted_sales = float(prediction[0])
@@ -316,13 +372,24 @@ if predict_button:
                     pct_change = ((predicted_sales - lag_1) / lag_1 * 100) if lag_1 > 0 else 0
                     st.metric("% Change", f"{pct_change:.1f}%")
         
+        except TypeError as te:
+            st.error(f"❌ **Type Error**: {str(te)}")
+            st.warning("⚠️ This usually means non-numeric data was passed to the model.")
+            logger.error(f"TypeError: {str(te)}")
+        
         except ValueError as ve:
-            st.error(f"❌ **Data Type Error**: {str(ve)}")
-            st.warning("⚠️ Ensure all inputs are valid numbers.")
+            st.error(f"❌ **Value Error**: {str(ve)}")
+            st.warning("⚠️ Please ensure all inputs are valid numbers.")
             logger.error(f"ValueError: {str(ve)}")
         
         except Exception as e:
             st.error(f"❌ **Prediction Failed**: {str(e)}")
+            
+            # Special handling for scipy.sparse error
+            if "scipy.sparse" in str(e).lower() and "object" in str(e).lower():
+                st.error("🔍 **Diagnosis**: scipy.sparse object dtype error detected!")
+                st.warning("The model received non-numeric (object dtype) data. Check the debug panel above.")
+            
             st.info("Please verify all inputs and try again.")
             logger.error(f"Prediction exception: {str(e)}")
 

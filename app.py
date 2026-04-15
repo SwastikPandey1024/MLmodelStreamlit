@@ -201,5 +201,6 @@ with col1:
                 st.error(f"❌ **Prediction Error**: {str(e)}")
                 st.info("Please verify all inputs are correctly filled and try again.")
                 logger.error(f"Exception during prediction: {str(e)}")
-else:
+
+with col2:
     st.info("← Click the button to generate a prediction")

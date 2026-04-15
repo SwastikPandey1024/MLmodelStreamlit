@@ -131,14 +131,15 @@ MLminorStreamlit/
 │   └── retrain_model.py            # Script to retrain model from fresh data
 │
 ├── 📖 DOCUMENTATION
-│   ├── README.md                   # This file - Complete project guide
 │   ├── PRD.md                      # Product Requirement Document (features, architecture)
 │   ├── BRD.md                      # Business Requirement Document (ROI, market analysis)
-│   ├── VALIDATION_GUIDE.md         # Testing & validation procedures
-│   └── requirements.txt            # Python dependencies
+│   └── VALIDATION_GUIDE.md         # Testing & validation procedures
 │
 ├── 📸 MEDIA
 │   └── Screenshot 2026-04-16 *.png # Application screenshots
+│
+├── README.md                       # This file - Complete project guide
+├── requirements.txt                # Python dependencies
 │
 └── 🔧 CONFIGURATION
     ├── .git/                       # Version control history
@@ -158,7 +159,7 @@ MLminorStreamlit/
 
 ### Step 1: Clone the Repository
 ```bash
-git clone https://github.com/yourusername/SalesPulseAI.git
+git clone https://github.com/SwastikPandey1024/SalesPulse_AI.git
 cd MLminorStreamlit
 ```
 
@@ -200,7 +201,8 @@ python -c "import streamlit; import xgboost; import pandas; print('✓ All depen
 
 ### Run the Streamlit App
 ```bash
-streamlit run app.py
+# Run from project root
+streamlit run frontend_ui/app.py
 ```
 
 The app will open at `http://localhost:8501`
@@ -245,10 +247,15 @@ The app will open at `http://localhost:8501`
 ```python
 import joblib
 import pandas as pd
+import os
 from datetime import datetime
 
+# Get the project root and model path
+project_root = os.path.dirname(os.path.abspath(__file__))
+model_path = os.path.join(project_root, 'model_data', 'model.pkl')
+
 # Load the trained model
-loaded = joblib.load('model.pkl')
+loaded = joblib.load(model_path)
 model = loaded['model_pipeline']
 expected_cols = loaded['expected_feature_columns']
 
@@ -279,12 +286,17 @@ print(f"Predicted Sales: ${prediction[0]:.2f}")
 ```python
 import pandas as pd
 import joblib
+import os
+
+# Get the project root and paths
+project_root = os.path.dirname(os.path.abspath(__file__))
+model_path = os.path.join(project_root, 'model_data', 'model.pkl')
 
 # Load CSV data
 df = pd.read_csv('sales_data.csv')
 
 # Load model
-loaded = joblib.load('model.pkl')
+loaded = joblib.load(model_path)
 model = loaded['model_pipeline']
 
 # Make predictions for all rows
@@ -392,7 +404,7 @@ Sales Prediction + Confidence Metrics
 
 ### Core Application Files
 
-**app.py** (700+ lines)
+**frontend_ui/app.py** (700+ lines)
 - Main Streamlit application
 - 5-tab interactive dashboard
 - Input validation and error handling
@@ -400,14 +412,14 @@ Sales Prediction + Confidence Metrics
 - Business insight generation
 - Feature importance computation
 
-**model.pkl**
+**model_data/model.pkl**
 - Serialized XGBoost model
 - Includes preprocessing pipeline
 - Training configuration metadata
 - Feature column names
 - Model performance metrics (MAE)
 
-**retrain_model.py**
+**development/retrain_model.py**
 - Automatic model retraining script
 - Data loading and preprocessing
 - Feature engineering
@@ -416,13 +428,13 @@ Sales Prediction + Confidence Metrics
 
 ### Data Files
 
-**Sample - Superstore.csv** (9,994 records)
+**model_data/Sample - Superstore.csv** (9,994 records)
 - Columns: Row ID, Order ID, Order Date, Ship Mode, Customer info, Sales, Quantity, Discount, Profit
 - Date range: 2014-2017
 - Used for training XGBoost and RandomForest models
 - Automatically preprocessed in notebook
 
-**ML_minor_project.ipynb**
+**development/ML_minor_project.ipynb**
 - Data exploration and analysis
 - Feature engineering demonstration
 - Model comparison (XGBoost vs Linear Regression vs RandomForest)
@@ -438,19 +450,19 @@ Sales Prediction + Confidence Metrics
 - Usage instructions
 - Model architecture details
 
-**PRD.md** (Product Requirements)
+**docs/PRD.md** (Product Requirements)
 - 10 core features detailed
 - Target users and acceptance criteria
 - Technical architecture
 - Functional & non-functional requirements
 
-**BRD.md** (Business Requirements)
+**docs/BRD.md** (Business Requirements)
 - Executive summary and ROI analysis
 - Problem statement and value proposition
 - Competitive advantage vs Tableau/Excel
 - Pricing strategy (Freemium model)
 
-**VALIDATION_GUIDE.md**
+**docs/VALIDATION_GUIDE.md**
 - 4-layer validation system explained
 - Test cases and expected outputs
 - Error handling and user feedback
@@ -609,7 +621,7 @@ Layer 3: DataFrame Integrity
 
 ### Running Tests
 
-See [VALIDATION_GUIDE.md](VALIDATION_GUIDE.md) for:
+See [docs/VALIDATION_GUIDE.md](docs/VALIDATION_GUIDE.md) for:
 - 20+ test cases with expected outputs
 - Valid/invalid input examples
 - Error message verification
@@ -622,10 +634,10 @@ See [VALIDATION_GUIDE.md](VALIDATION_GUIDE.md) for:
 | Document | Purpose | Audience |
 |----------|---------|----------|
 | [README.md](README.md) | Project overview & setup | Everyone |
-| [PRD.md](PRD.md) | Features & technical specs | Product managers, developers |
-| [BRD.md](BRD.md) | Business case & ROI | Business stakeholders, executives |
-| [VALIDATION_GUIDE.md](VALIDATION_GUIDE.md) | Testing procedures | QA, developers |
-| [ML_minor_project.ipynb](ML_minor_project.ipynb) | Model development | Data scientists, ML engineers |
+| [docs/PRD.md](docs/PRD.md) | Features & technical specs | Product managers, developers |
+| [docs/BRD.md](docs/BRD.md) | Business case & ROI | Business stakeholders, executives |
+| [docs/VALIDATION_GUIDE.md](docs/VALIDATION_GUIDE.md) | Testing procedures | QA, developers |
+| [development/ML_minor_project.ipynb](development/ML_minor_project.ipynb) | Model development | Data scientists, ML engineers |
 
 ---
 
@@ -660,7 +672,7 @@ Use GitHub Issues to report:
 ## 📸 Screenshots & Demo
 
 ### Dashboard Overview
-![SalesPulse AI Dashboard](Screenshot%202026-04-16%20013030.png)
+![SalesPulse AI Dashboard](media/Screenshot%202026-04-16%20013030.png)
 
 **Features Shown:**
 - System status (Model: Loaded, Features: 13, Status: Ready)

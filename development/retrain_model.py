@@ -12,13 +12,15 @@ from xgboost import XGBRegressor
 from sklearn.metrics import mean_absolute_error
 import os
 
-# Set path
-path = r'C:\Users\Swastik Pandey\OneDrive\Documents\MLminorStreamlit'
-os.chdir(path)
+# Set path - Get project root from current directory
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+model_data_path = os.path.join(project_root, 'model_data')
+csv_file = os.path.join(model_data_path, 'Sample - Superstore.csv')
+model_output = os.path.join(model_data_path, 'model.pkl')
 
 # Load data
 print('Loading data...')
-df = pd.read_csv('Sample - Superstore.csv', encoding='latin1')
+df = pd.read_csv(csv_file, encoding='latin1')
 df['Order Date'] = pd.to_datetime(df['Order Date'])
 df = df.sort_values('Order Date')
 df = df.ffill()
@@ -109,12 +111,12 @@ joblib.dump({
     'model_type': 'XGBoost',
     'mae': mae,
     'features': ENGINEERED_FEATURES
-}, 'model.pkl')
+}, model_output)
 
-print('✅ Model saved as model.pkl')
+print(f'✅ Model saved as {model_output}')
 
 # Verify
-loaded = joblib.load('model.pkl')
+loaded = joblib.load(model_output)
 print(f'\nModel Verification:')
 print(f'   Type: {loaded["model_type"]}')
 print(f'   Features: {len(loaded["expected_feature_columns"])} columns')

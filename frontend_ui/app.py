@@ -48,7 +48,11 @@ except Exception as e:
 # ============================================================================
 # FILE EXISTENCE CHECK
 # ============================================================================
-required_files = ["model.pkl"]
+# Get the project root (parent of frontend_ui)
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+MODEL_PATH = os.path.join(PROJECT_ROOT, 'model_data', 'model.pkl')
+
+required_files = [MODEL_PATH]
 missing_files = []
 for filename in required_files:
     if not os.path.exists(filename):
@@ -59,7 +63,7 @@ if missing_files:
     st.error(f"The following files are required but not found:")
     for f in missing_files:
         st.code(f"  • {f}")
-    st.error("Please ensure all required files are in the app directory.")
+    st.error("Please ensure all required files are in the project structure.")
     st.stop()
 
 # ============================================================================
@@ -130,11 +134,11 @@ def load_model():
         logger.info("Loading model from model.pkl...")
         
         # Check file exists first
-        if not os.path.exists("model.pkl"):
-            raise FileNotFoundError("model.pkl not found in current directory")
+        if not os.path.exists(MODEL_PATH):
+            raise FileNotFoundError(f"model.pkl not found at {MODEL_PATH}")
         
         # Load the model bundle
-        with open("model.pkl", "rb") as f:
+        with open(MODEL_PATH, "rb") as f:
             loaded_content = joblib.load(f)
         
         logger.info(f"✓ Model loaded successfully")

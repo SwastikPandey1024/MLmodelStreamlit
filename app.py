@@ -34,6 +34,30 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# ============================================================================
+# FEATURE CONSTANTS (MUST MATCH model.pkl EXACTLY)
+# ============================================================================
+# These are the ONLY features the production model accepts.
+# The model was trained on ENGINEERED FEATURES ONLY (no raw dataset columns).
+# This list MUST match the 'expected_feature_columns' in model.pkl exactly.
+ENGINEERED_FEATURES = [
+    "day",
+    "month",
+    "weekday",
+    "is_weekend",
+    "weekofyear",
+    "lag_1",
+    "lag_7",
+    "lag_14",
+    "lag_30",
+    "rolling_mean_7",
+    "rolling_mean_14",
+    "rolling_std_7",
+    "trend"
+]
+
+print(f"✓ App initialized with {len(ENGINEERED_FEATURES)} engineered features")
+
 st.set_page_config(
     page_title="Sales Prediction App",
     layout="wide",
@@ -66,6 +90,15 @@ def load_model():
 
 
 model_pipeline, expected_columns = load_model()
+
+# Validate that loaded features match engineered features
+if expected_columns != ENGINEERED_FEATURES:
+    st.error(f"❌ CRITICAL: Feature mismatch!")
+    st.error(f"Expected: {ENGINEERED_FEATURES}")
+    st.error(f"Loaded: {expected_columns}")
+    st.stop()
+else:
+    logger.info(f"✓ Model features verified: {len(expected_columns)} columns match")
 
 # ============================================================================
 # PAGE LAYOUT
